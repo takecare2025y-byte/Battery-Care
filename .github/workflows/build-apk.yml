@@ -43,19 +43,28 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Fix Java Target
+      - name: Fix Java and Kotlin Targets
         run: |
           cat > "$RUNNER_TEMP/fix-target.gradle" <<'EOF'
           allprojects {
               afterEvaluate {
-                  tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                  tasks.withType(JavaCompile).configureEach {
                       sourceCompatibility = "17"
                       targetCompatibility = "17"
+                      options.release.set(17)
+                  }
+
+                  tasks.matching {
+                      it.name.toLowerCase().contains("kotlin")
+                  }.configureEach {
+                      if (it.hasProperty("kotlinOptions")) {
+                          it.kotlinOptions.jvmTarget = "17"
+                      }
                   }
               }
           }
           EOF
-
+        
       - name: Build APK
         run: gradle -I "$RUNNER_TEMP/fix-target.gradle" -p "$PROJECT_DIR" --no-daemon assembleDebug
 
