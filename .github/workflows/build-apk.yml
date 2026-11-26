@@ -31,7 +31,7 @@ jobs:
         run: |
           FILE=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
           if [ -z "$FILE" ]; then
-            echo "ERROR: settings.gradle ZIP ke andar nahi mili."
+            echo "ERROR: settings.gradle nahi mili"
             exit 1
           fi
           PROJECT_DIR=$(dirname "$FILE")
@@ -43,8 +43,21 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Fix Java Target
+        run: |
+          cat > "$RUNNER_TEMP/fix-target.gradle" <<'EOF'
+          allprojects {
+              afterEvaluate {
+                  tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                      sourceCompatibility = "17"
+                      targetCompatibility = "17"
+                  }
+              }
+          }
+          EOF
+
       - name: Build APK
-        run: gradle -p "$PROJECT_DIR" --no-daemon assembleDebug
+        run: gradle -I "$RUNNER_TEMP/fix-target.gradle" -p "$PROJECT_DIR" --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
